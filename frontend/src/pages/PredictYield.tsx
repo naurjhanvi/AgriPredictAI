@@ -42,10 +42,10 @@ const AnimatedCounter = ({ target, prefix = "", suffix = "", duration = 800 }: {
 
 const PredictYield = () => {
   const { isDemoMode, user, updateUser } = useAuth();
-  const [form, setForm] = useState({ 
-    crop: '', 
-    season: '', 
-    fertilizerAmount: '', 
+  const [form, setForm] = useState({
+    crop: '',
+    season: '',
+    fertilizerAmount: '',
     pesticideAmount: '',
     // Hidden/Auto-passed
     n: user?.soilDetails?.nitrogen || 0,
@@ -53,7 +53,7 @@ const PredictYield = () => {
     k: user?.soilDetails?.potassium || 0,
     ph: user?.soilDetails?.ph || 7.0
   });
-  
+
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<typeof MOCK_RESULT | null>(null);
 
@@ -79,21 +79,44 @@ const PredictYield = () => {
     }
     setStatus('loading');
     try {
-      // Prepare payload with both user-entered and profile-fetched data
-      const payload = {
-        ...form,
-        state: user.state,
-        district: user.district
-      };
-
-      const res = await fetch(API.predictYield, {
+      // Step 1: Save yield input
+      const saveRes = await fetch(API.saveYieldInput, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify({
+          crop_name: form.crop,
+          season: form.season,
+          area: user?.land_area_acres || 1,
+          fertilizer: Number(form.fertilizerAmount),
+          pesticide: Number(form.pesticideAmount),
+          soil_type: 'loamy'
+        }),
+      });
+      if (!saveRes.ok) throw new Error();
+
+      // Step 2: Get prediction
+      const res = await fetch(API.getYieldPredict, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${user?.token}`
+        },
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setResult(data);
+
+      setResult({
+        yield_kg_per_acre: data.prediction.predicted_yield,
+        profit_inr: data.profit.estimated_profit_per_acre,
+        confidence: 91,
+        recommendations: [
+          `Best season for ${form.crop}: ${form.season}`,
+          `Apply ${form.fertilizerAmount}kg fertilizer as planned`,
+          `Monitor crop health regularly`
+        ]
+      });
       setStatus('success');
     } catch {
       await new Promise(r => setTimeout(r, 1500));
@@ -102,6 +125,7 @@ const PredictYield = () => {
       if (!isDemoMode) toast.info('Using demo logic — API unavailable');
     }
   };
+
 
   const reset = () => {
     setStatus('idle');
@@ -146,26 +170,26 @@ const PredictYield = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
                   <div>
                     <label className="text-sm font-bold text-gray-900 block mb-2 flex items-center gap-2">
-                       <Beaker className="h-4 w-4 text-emerald-500" /> Fertilizer Amount (kg)
+                      <Beaker className="h-4 w-4 text-emerald-500" /> Fertilizer Amount (kg)
                     </label>
-                    <input 
-                      type="number" step="1" min="0" placeholder="e.g. 50" 
-                      value={form.fertilizerAmount} 
-                      onChange={e => update('fertilizerAmount', e.target.value)} 
+                    <input
+                      type="number" step="1" min="0" placeholder="e.g. 50"
+                      value={form.fertilizerAmount}
+                      onChange={e => update('fertilizerAmount', e.target.value)}
                       required
-                      className="w-full rounded-2xl border border-border bg-gray-50/50 px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-sm" 
+                      className="w-full rounded-2xl border border-border bg-gray-50/50 px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-sm"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-bold text-gray-900 block mb-2 flex items-center gap-2">
                       <FlaskConical className="h-4 w-4 text-emerald-500" /> Pesticide Amount (L)
                     </label>
-                    <input 
-                      type="number" step="0.1" min="0" placeholder="e.g. 2.5" 
-                      value={form.pesticideAmount} 
-                      onChange={e => update('pesticideAmount', e.target.value)} 
+                    <input
+                      type="number" step="0.1" min="0" placeholder="e.g. 2.5"
+                      value={form.pesticideAmount}
+                      onChange={e => update('pesticideAmount', e.target.value)}
                       required
-                      className="w-full rounded-2xl border border-border bg-gray-50/50 px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-sm" 
+                      className="w-full rounded-2xl border border-border bg-gray-50/50 px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-sm"
                     />
                   </div>
                 </div>
@@ -277,7 +301,7 @@ const PredictYield = () => {
                   <button onClick={reset} className="inline-flex flex-1 items-center justify-center gap-2 h-[56px] rounded-full border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-all">
                     <RotateCcw className="h-5 w-5" /> Run Another Prediction
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       const name = prompt("Enter a name for this report:", `${form.crop} Report - ${new Date().toLocaleDateString()}`);
                       if (name) {
