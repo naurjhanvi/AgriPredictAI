@@ -30,7 +30,8 @@ interface User {
   name: string;
   phone: string;
   state: string;
-  district: string;
+  location: string;
+  land_area_acres: number;
   token: string;
   soilDetails?: SoilDetails;
   reports?: CropReport[];
