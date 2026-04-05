@@ -51,9 +51,9 @@ def predict_disease(image_bytes: bytes):
 def predict_yield(crop: str, season: str, state: str, area: float, 
                   annual_rainfall: float, fertilizer: float, pesticide: float):
     """Feature 3: Yield Prediction"""
-    crop_enc = yield_encoders['Crop'].transform([crop])[0]
-    season_enc = yield_encoders['Season'].transform([season])[0]
-    state_enc = yield_encoders['State'].transform([state])[0]
+    crop_enc = yield_encoders['Crop'].transform([crop.capitalize()])[0]
+    season_enc = yield_encoders['Season'].transform([season.capitalize()])[0]
+    state_enc = yield_encoders['State'].transform([state.capitalize()])[0]
     seq = np.array([[crop_enc, season_enc, state_enc, area, annual_rainfall, fertilizer, pesticide]] * 3)
     seq_scaled = yield_scaler.transform(seq).reshape(1, 3, 7)
     pred = yield_model.predict(seq_scaled)[0][0]
