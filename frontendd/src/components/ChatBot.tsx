@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // This is the institutional API key for AgriPredict AI services
-const GEMINI_API_KEY = "AIzaSyBZ_a-tQjvqkgcVlnIwI5sU9R4oSFpguSg";
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 interface Message {
   role: 'user' | 'model';
